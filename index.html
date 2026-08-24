@@ -1,0 +1,1464 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>反應動作動畫產生器 ｜ 帶團設定與播放</title>
+<meta name="description" content="長者認知動作訓練：箭頭、顏色、形狀、數字、算式、詞彙六種模式，可混搭出題。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+:root{
+  --ink:#12343B; --orange:#E8552D; --amber:#F4A93C; --teal:#028090;
+  --paper:#F7F3E9; --card:#FFFFFF; --line:#E4DACA; --muted:#6A7A7E; --soft:#FDFAF3;
+  --r:16px; --rlg:22px; --shadow:0 6px 20px rgba(18,52,59,.07);
+}
+html{-webkit-text-size-adjust:100%}
+body{font-family:"Noto Sans TC","Microsoft JhengHei","微軟正黑體",system-ui,sans-serif;
+  background:var(--paper);color:var(--ink);min-height:100vh;line-height:1.5;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font-family:inherit;font-size:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--teal);outline-offset:2px;border-radius:6px}
+
+.top{position:sticky;top:0;z-index:30;background:var(--ink);color:#fff;display:flex;align-items:center;gap:14px;
+  padding:12px 18px;padding-top:calc(12px + env(safe-area-inset-top));box-shadow:0 2px 14px rgba(18,52,59,.25)}
+.top .brand{display:flex;align-items:baseline;gap:10px;flex:1;min-width:0}
+.top h1{font-size:19px;font-weight:900;letter-spacing:.5px;white-space:nowrap}
+.top .sub{font-size:13px;color:#AFC4C7;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.play-btn{background:var(--orange);color:#fff;border:none;border-radius:999px;padding:11px 22px;font-weight:900;
+  font-size:15px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;min-height:44px;
+  box-shadow:0 4px 0 #B93C18;transition:transform .12s,box-shadow .12s}
+.play-btn:hover{transform:translateY(-1px);box-shadow:0 5px 0 #B93C18}
+.play-btn:active{transform:translateY(2px);box-shadow:0 2px 0 #B93C18}
+
+.wrap{max-width:1220px;margin:0 auto;padding:20px 16px 60px;
+  display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,.85fr);gap:18px;align-items:start}
+@media(max-width:1020px){.wrap{grid-template-columns:1fr}}
+.col{display:flex;flex-direction:column;gap:16px;min-width:0}
+.side{position:sticky;top:82px}
+@media(max-width:1020px){.side{position:static}}
+
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--rlg);padding:20px;box-shadow:var(--shadow)}
+.card>h2{font-size:17px;font-weight:900;display:flex;align-items:center;gap:9px;margin-bottom:4px}
+.card>.lead{font-size:13px;color:var(--muted);margin-bottom:16px}
+.card h3{font-size:14px;font-weight:900;margin:18px 0 8px;display:flex;align-items:center;gap:8px}
+.hint{font-size:12.5px;color:var(--muted);line-height:1.6}
+.tag{font-size:11.5px;font-weight:900;background:var(--amber);color:var(--ink);padding:3px 9px;border-radius:999px;margin-left:auto}
+
+label{display:block;font-size:13px;font-weight:700;color:var(--muted);margin-bottom:7px}
+.field{background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:15px}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+@media(max-width:620px){.row{grid-template-columns:1fr}}
+input[type=range]{width:100%;height:30px;accent-color:var(--orange);background:transparent;cursor:pointer}
+.readout{font-size:26px;font-weight:900;color:var(--orange);line-height:1;white-space:nowrap}
+.readout span{font-size:13px;color:var(--muted);font-weight:700;margin-left:3px}
+.txt{width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:11px;background:var(--soft);min-height:42px}
+.txt:focus{background:#fff;border-color:var(--teal)}
+.chips{display:flex;gap:7px;flex-wrap:wrap;margin-top:10px}
+.chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;min-height:38px}
+.chip:hover{border-color:var(--orange);color:var(--orange)}
+.chip[aria-pressed=true]{background:var(--ink);color:#fff;border-color:var(--ink)}
+
+.btn{border:none;border-radius:999px;padding:10px 18px;font-weight:900;font-size:14px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;gap:7px;min-height:44px;transition:filter .12s}
+.btn:hover{filter:brightness(.94)}
+.btn-ink{background:var(--ink);color:#fff}
+.btn-orange{background:var(--orange);color:#fff}
+.btn-teal{background:var(--teal);color:#fff}
+.btn-ghost{background:#F1EADB;color:var(--ink)}
+.btn-sm{padding:7px 13px;font-size:13px;min-height:36px}
+
+.meter{margin-top:14px;background:var(--soft);border:1px solid var(--line);border-radius:var(--r);padding:14px 16px}
+.meter-top{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap}
+.meter-top b{font-size:16px}
+.ticks{display:flex;gap:3px;margin-top:11px;height:24px;align-items:flex-end}
+.tick{flex:1;min-width:2px;border-radius:2px;height:62%;opacity:.9}
+.badge{font-size:12px;font-weight:900;background:#E3F1F0;color:#046A6A;padding:5px 11px;border-radius:999px;white-space:nowrap}
+
+/* 模式選擇 */
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+@media(max-width:560px){.modes{grid-template-columns:1fr}}
+.mode{position:relative;border:2px solid var(--line);background:var(--soft);border-radius:var(--r);
+  padding:14px 46px 14px 15px;cursor:pointer;transition:.15s;display:block}
+.mode:hover{border-color:#C9BCA3}
+.mode.on{border-color:var(--orange);background:#FFF4EF}
+.mode strong{display:block;font-size:15px;font-weight:900;margin-bottom:4px}
+.mode small{display:block;font-size:12.5px;color:var(--muted);line-height:1.55}
+.mode input{position:absolute;right:14px;top:16px;appearance:none;width:24px;height:24px;border-radius:7px;
+  border:2px solid #CFC3AC;background:#fff;cursor:pointer}
+.mode input:checked{background:var(--orange);border-color:var(--orange)}
+.mode input:checked::after{content:'✓';color:#fff;font-size:15px;font-weight:900;position:absolute;left:4px;top:-2px}
+
+.switch{display:flex;align-items:center;gap:12px;background:var(--soft);border:1px solid var(--line);
+  border-radius:12px;padding:11px 14px;margin-top:9px;cursor:pointer;min-height:48px}
+.switch b{font-size:14px;font-weight:700}
+.switch em{font-style:normal;font-size:12px;color:var(--muted);display:block;font-weight:400;margin-top:1px}
+.switch .txtwrap{flex:1;min-width:0}
+.switch input{appearance:none;width:46px;height:27px;background:#D5CBB6;border-radius:999px;position:relative;
+  cursor:pointer;transition:background .18s;flex:none}
+.switch input:checked{background:var(--teal)}
+.switch input::after{content:'';position:absolute;left:3px;top:3px;width:21px;height:21px;background:#fff;
+  border-radius:50%;transition:left .18s;box-shadow:0 1px 3px rgba(0,0,0,.25)}
+.switch input:checked::after{left:22px}
+
+/* 對應表 */
+.maprow{display:grid;grid-template-columns:88px 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.mapkey{display:flex;align-items:center;justify-content:center;gap:6px;height:46px;border-radius:12px;
+  background:var(--soft);border:1px solid var(--line);font-weight:900;font-size:15px}
+.mapkey svg{width:26px;height:26px}
+.swatch{width:26px;height:26px;border-radius:8px;border:1px solid rgba(0,0,0,.12)}
+.seg{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.seg button{border:1px solid var(--line);background:#fff;border-radius:10px;padding:8px 13px;font-size:13px;
+  font-weight:700;cursor:pointer;min-height:40px}
+.seg button[aria-pressed=true]{background:var(--teal);color:#fff;border-color:var(--teal)}
+.subcard{border:1px dashed #C9D9D8;background:#F6FBFA;border-radius:14px;padding:14px;margin-top:10px}
+.subcard>b{font-size:14px;display:flex;align-items:center;gap:7px;margin-bottom:8px}
+
+.presets{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+@media(max-width:560px){.presets{grid-template-columns:1fr}}
+.preset{border:1px dashed #C9D9D8;background:#F4FAF9;border-radius:14px;padding:13px}
+.preset b{font-size:14px;display:block}
+.preset p{font-size:12px;color:var(--muted);margin:2px 0 9px}
+.saved{display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--soft);
+  border:1px solid var(--line);border-radius:12px;padding:11px 13px}
+.notice{background:#FFF7EC;border:1px solid #EFD7AE;border-radius:12px;padding:12px 14px;
+  font-size:12.5px;line-height:1.75;color:#7A5417;margin-top:13px}
+.notice b{color:#5E3F0E}
+
+.summary{background:var(--ink);color:#fff;border-radius:var(--rlg);padding:20px;box-shadow:var(--shadow)}
+.summary h2{font-size:13px;font-weight:900;color:var(--amber);letter-spacing:2px;margin-bottom:10px}
+.summary .headline{font-size:24px;font-weight:900;line-height:1.35}
+.summary .metas{display:flex;gap:7px;flex-wrap:wrap;margin-top:12px}
+.summary .metas span{background:rgba(255,255,255,.12);border-radius:999px;padding:6px 12px;font-size:12.5px;font-weight:700}
+.stage-mini{margin-top:16px;background:rgba(255,255,255,.07);border:1px solid rgba(255,255,255,.14);
+  border-radius:var(--r);padding:16px 14px;text-align:center;min-height:180px;
+  display:flex;flex-direction:column;justify-content:center;align-items:center;gap:8px}
+.stage-mini .vis{height:104px;display:grid;place-items:center}
+.stage-mini .vis svg{height:96px;width:auto}
+.stage-mini .vis .num{font-size:60px;font-weight:900;line-height:1}
+.stage-mini .vis .wd{font-size:40px;font-weight:900;letter-spacing:2px}
+.stage-mini .act{font-size:15px;color:#9FE8DF;min-height:24px;font-weight:700}
+.mini-bar{height:4px;background:rgba(255,255,255,.15);border-radius:99px;margin-top:12px;overflow:hidden}
+.mini-bar i{display:block;height:100%;background:var(--amber);width:0}
+.side-actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:16px}
+.side-actions .btn{width:100%}
+.note{font-size:12px;color:#AFC4C7;margin-top:12px;line-height:1.6}
+
+/* 播放器 */
+.player{position:fixed;inset:0;height:100dvh;z-index:100;background:var(--paper);display:none;
+  flex-direction:column;overscroll-behavior:none}
+.player.on{display:flex}
+.p-head{display:flex;align-items:center;gap:14px;padding:14px 20px;padding-top:calc(14px + env(safe-area-inset-top))}
+.p-head .count{font-size:15px;font-weight:900;color:var(--muted)}
+.p-head .spacer{flex:1}
+.p-close{background:#fff;border:1px solid var(--line);border-radius:999px;padding:9px 16px;font-weight:900;font-size:14px;cursor:pointer;min-height:44px}
+.p-progress{height:6px;background:#E4DACA;margin:0 20px;border-radius:99px;overflow:hidden}
+.p-progress i{display:block;height:100%;background:var(--teal);width:0;transition:width .25s linear}
+.p-stage{flex:1 1 0;padding:4px 12px;position:relative;min-height:0;display:block}
+.p-inner{position:absolute;inset:0;text-align:center}
+/* 舞台四邊留出指令列與角落資訊的位置，圖形本身吃滿中間所有空間 */
+.p-vis{position:absolute;left:0;right:0;top:30px;bottom:10px;display:grid;place-items:center}
+.p-vis svg{height:min(var(--visH,52vh),88vw);width:auto;display:block}
+.p-vis svg.colorblock{height:min(var(--visH,52vh),58vw)}
+.p-vis .dual{display:flex;gap:4vw;align-items:flex-end;justify-content:center;width:100%}
+.p-vis .dual .side{display:flex;flex-direction:column;align-items:center;gap:8px}
+.p-vis .dual .side b{font-size:clamp(15px,2.2vw,24px);color:var(--muted);letter-spacing:2px}
+.p-vis .dual svg{height:min(calc(var(--visH,52vh) * .82),40vw)}
+.p-vis .shaperow{display:flex;gap:2.2vw;align-items:center;justify-content:center;width:100%}
+.p-vis .shaperow svg{height:min(calc(var(--visH,52vh) * .92),19vw)}
+.dualbar{text-align:center;padding:2px 16px 0}
+.dualbar span{display:inline-block;background:var(--orange);color:#fff;font-weight:900;
+  font-size:clamp(13px,1.8vw,19px);padding:8px 20px;border-radius:999px;letter-spacing:1px}
+.p-vis .num{font-size:min(calc(150vw / var(--n,2)),calc(var(--visH,52vh) * .94));font-weight:900;line-height:1}
+.p-vis .expr{font-size:min(15vw,calc(var(--visH,52vh) * .72));font-weight:900;line-height:1.06;letter-spacing:.04em}
+.p-vis .wd{font-size:min(calc(82vw / var(--n,2)),calc(var(--visH,52vh) * .9));font-weight:900;letter-spacing:.06em;line-height:1.08}
+.p-vis.pop{animation:pop .38s cubic-bezier(.2,1.4,.4,1)}
+/* 指令：貼在舞台最上緣的一行，不佔用圖形空間 */
+.p-prompt{position:absolute;left:0;right:0;top:0;margin:0;font-size:clamp(14px,1.9vw,21px);
+  color:var(--muted);font-weight:700;letter-spacing:3px;line-height:1.5;pointer-events:none}
+/* 答案：右下角浮貼，不影響版面 */
+.p-answer{position:absolute;right:8px;bottom:6px;z-index:3;display:block;text-align:right;pointer-events:none}
+.p-answer .box{display:inline-block;background:var(--teal);color:#fff;border-radius:16px;
+  padding:9px 22px;box-shadow:0 5px 0 #01636E, 0 0 0 4px rgba(247,243,233,.85);
+  animation:rise .3s cubic-bezier(.2,1.3,.4,1)}
+.p-answer .box.warn{background:var(--orange);box-shadow:0 5px 0 #B93C18, 0 0 0 4px rgba(247,243,233,.85)}
+.p-answer .big{font-size:clamp(26px,3.2vw,52px);font-weight:900;letter-spacing:2px;line-height:1.25;white-space:nowrap}
+.secpill{display:none;background:var(--orange);color:#fff;font-weight:900;border-radius:999px;
+  padding:6px 0;font-size:17px;min-width:54px;text-align:center}
+.ring{position:absolute;left:14px;bottom:10px;right:auto;width:92px;height:92px;z-index:3}
+.ring circle{fill:none;stroke-width:9;stroke-linecap:round}
+.ring .bg{stroke:#E4DACA}
+.ring .fg{stroke:var(--orange);transform:rotate(-90deg);transform-origin:50% 50%;transition:stroke-dashoffset .1s linear}
+.ring text{font-size:34px;font-weight:900;fill:var(--ink);text-anchor:middle;dominant-baseline:central}
+@media(max-width:640px){.ring{display:none}.secpill{display:inline-block}}
+.legend{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;padding:6px 16px 0}
+.legend .it{display:flex;align-items:center;gap:7px;background:#fff;border:1px solid var(--line);
+  border-radius:999px;padding:6px 14px;font-size:clamp(12px,1.5vw,16px);font-weight:700}
+.legend .it svg{width:20px;height:20px}
+.legend .it .swatch{width:18px;height:18px;border-radius:5px}
+.p-foot{display:flex;gap:10px;justify-content:center;align-items:center;padding:12px 20px;
+  padding-bottom:calc(14px + env(safe-area-inset-bottom));flex-wrap:wrap}
+.p-foot .btn{min-width:100px}
+.p-keys{width:100%;text-align:center;font-size:12px;color:var(--muted);margin-top:2px}
+@media(max-width:640px){.p-keys{display:none}}
+.p-done{position:absolute;inset:0;display:grid;place-items:center;align-content:center;text-align:center}
+.p-done .big{font-size:clamp(42px,9vw,86px);font-weight:900;color:var(--orange)}
+.p-done p{font-size:17px;color:var(--muted);margin:10px 0 26px}
+.p-done .btns{display:flex;gap:12px;justify-content:center;flex-wrap:wrap}
+
+#ytHost{position:fixed;left:-9999px;top:0;width:280px;height:158px;opacity:0;pointer-events:none}
+#pMute{padding:8px 12px;min-width:46px}
+.toast{position:fixed;left:50%;bottom:28px;transform:translate(-50%,20px);background:var(--ink);color:#fff;
+  padding:13px 22px;border-radius:999px;font-size:14px;font-weight:700;z-index:200;opacity:0;pointer-events:none;
+  transition:.24s;box-shadow:0 8px 24px rgba(0,0,0,.25);max-width:90vw;text-align:center}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+.storewarn{background:#FFF4EF;border:1px solid #F3C6B4;color:#9B3A17;border-radius:12px;
+  padding:11px 14px;font-size:13px;line-height:1.6;margin-bottom:16px;display:none}
+.storewarn.on{display:block}
+.p-tap{display:none;width:100%;text-align:center;font-size:12px;color:var(--muted);margin-top:4px}
+
+/* ---------- 手機 ---------- */
+button,.chip,.btn,.mode,.switch,.p-close{touch-action:manipulation}
+html{-webkit-tap-highlight-color:transparent}
+@media(max-width:760px){
+  .top{gap:10px;padding:11px 14px}
+  .top .sub{display:none}
+  .top h1{font-size:17px}
+  .play-btn{padding:10px 17px;font-size:14px}
+  .wrap{padding:16px 12px 44px;gap:14px}
+  .col{gap:14px}
+  .card{padding:16px;border-radius:18px}
+  .card>h2{font-size:16px}
+  .summary{padding:17px}
+  .summary .headline{font-size:21px}
+  .maprow{grid-template-columns:76px 1fr;gap:8px}
+  .seg button,.chip{font-size:13px}
+}
+@media(max-width:640px){
+  .legend{flex-wrap:nowrap;overflow-x:auto;justify-content:flex-start;padding:6px 12px 0;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch}
+  .legend::-webkit-scrollbar{display:none}
+  .legend .it{flex:none}
+  .p-head{padding:9px 12px;padding-top:calc(9px + env(safe-area-inset-top));gap:9px}
+  .p-head .count{font-size:13px}
+  .p-close{padding:8px 13px;font-size:13px;min-height:40px}
+  .p-progress{margin:0 12px}
+  .p-stage{padding:4px 8px}
+  .p-foot{gap:6px;padding:10px 10px;padding-bottom:calc(12px + env(safe-area-inset-bottom))}
+  .p-foot .btn{min-width:0;flex:1 1 0;padding:11px 4px;font-size:13px;gap:3px}
+  .p-tap{display:block}
+  .dualbar span{padding:6px 14px}
+  .p-answer{right:6px;bottom:4px}
+  .p-answer .box{padding:8px 16px;border-radius:14px}
+  .p-answer .big{font-size:clamp(22px,5.6vw,34px);letter-spacing:1px}
+  .p-prompt{font-size:14px;letter-spacing:2px}
+  .p-vis{top:26px;bottom:6px}
+}
+@media(max-width:400px){
+  .p-foot .btn{font-size:12px;padding:11px 2px}
+}
+/* 寬螢幕（桌機・投影・平板橫放）：提示與答案改成浮貼右側，
+   圖形獨佔整個舞台高度，並維持在畫面正中央 */
+@media(min-width:1000px) and (min-aspect-ratio:13/10){
+  .p-answer{right:16px;bottom:12px}
+  .p-answer .box{padding:11px 28px;border-radius:18px}
+  .p-prompt{top:2px;letter-spacing:5px}
+}
+
+/* 手機橫放：畫面很扁，把答案移到右邊，讓圖形吃滿整個高度 */
+@media(max-height:560px) and (orientation:landscape){
+  .p-stage{padding:2px 8px}
+  .p-vis{top:24px;bottom:6px}
+  .p-prompt{font-size:clamp(12px,1.7vw,16px);letter-spacing:2px}
+  .p-answer{right:6px;bottom:4px}
+  .p-answer .box{padding:7px 16px;border-radius:13px;box-shadow:0 4px 0 #01636E, 0 0 0 3px rgba(247,243,233,.85)}
+  .p-answer .box.warn{box-shadow:0 4px 0 #B93C18, 0 0 0 3px rgba(247,243,233,.85)}
+  .p-answer .big{font-size:clamp(20px,3.4vw,36px);letter-spacing:1px}
+  .p-done .big{font-size:clamp(34px,7vw,60px)}
+  .p-done p{margin:6px 0 16px;font-size:15px}
+  .p-head{padding:6px 12px;padding-top:calc(6px + env(safe-area-inset-top))}
+  .p-foot{padding:6px 10px;padding-bottom:calc(8px + env(safe-area-inset-bottom))}
+  .p-foot .btn{min-height:38px;padding:8px 4px}
+  .p-tap{display:none}
+  .legend{padding:2px 12px 0}
+  .legend .it{padding:4px 11px;font-size:12px}
+  .dualbar{padding:0}
+  .dualbar span{padding:4px 13px;font-size:12px}
+  .p-vis .dual svg{height:min(100%,26vw)}
+  .p-vis .shaperow svg{height:min(100%,15vw)}
+}
+@media(prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand">
+    <h1>反應動作動畫產生器</h1>
+    <span class="sub">箭頭・顏色・形狀・數字・算式・詞彙，可混搭</span>
+  </div>
+  <button class="play-btn" onclick="startPlay()">▶ 開始播放</button>
+</header>
+
+<main class="wrap">
+  <div class="col">
+    <div class="storewarn" id="storeWarn">
+      這個環境不能保存設定，重新整理後會回到預設值。把檔案下載到電腦或放上網站開啟，就會自動記住。
+    </div>
+
+    <section class="card">
+      <h2>🧩 出題模式 <span class="tag" id="modeTag">已選 2 種</span></h2>
+      <p class="lead">勾幾個就混幾個。勾一個就是單一模式，勾兩個以上會隨機交錯出題。</p>
+      <div class="modes" id="modes">
+        <label class="mode" data-m="arrow"><input type="checkbox" data-mode="arrow" checked>
+          <strong>➡️ 箭頭</strong><small>看方向做對應動作，可加紅色反向規則</small></label>
+        <label class="mode" data-m="color"><input type="checkbox" data-mode="color">
+          <strong>🟥 顏色</strong><small>看顏色做對應動作，自訂每個顏色配什麼</small></label>
+        <label class="mode" data-m="shape"><input type="checkbox" data-mode="shape">
+          <strong>🔺 形狀</strong><small>圓形、方形、三角形、星形各配一個動作</small></label>
+        <label class="mode" data-m="number"><input type="checkbox" data-mode="number" checked>
+          <strong>🔢 數字</strong><small>拍手幾下、湊成 100、單雙數反應</small></label>
+        <label class="mode" data-m="math"><input type="checkbox" data-mode="math">
+          <strong>➕ 算式</strong><small>加減乘，四種難度，時間到公布答案</small></label>
+        <label class="mode" data-m="word"><input type="checkbox" data-mode="word">
+          <strong>🔤 詞彙</strong><small>相反詞、同類詞聯想</small></label>
+      </div>
+      <p class="hint" id="modeWarn" style="margin-top:11px"></p>
+    </section>
+
+    <section class="card">
+      <h2>⏱ 節奏與時間 <span class="tag">題數自動算</span></h2>
+      <p class="lead">先決定一題給幾秒反應，再決定整段活動做多久。</p>
+      <div class="row">
+        <div class="field">
+          <label for="sec">每題停留秒數</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <input type="range" id="sec" min="2" max="15" step="1" value="4">
+            <div class="readout" id="secVal">4<span>秒</span></div>
+          </div>
+          <p class="hint">動作類 3–5 秒、算式類建議 6 秒以上，長輩才來得及算。</p>
+        </div>
+        <div class="field">
+          <label for="total">整段活動時間</label>
+          <div style="display:flex;align-items:center;gap:12px">
+            <input type="range" id="total" min="60" max="600" step="30" value="180">
+            <div class="readout" id="totalVal">3<span>分</span></div>
+          </div>
+          <div class="chips" id="totalChips">
+            <button type="button" class="chip" data-t="60">1 分</button>
+            <button type="button" class="chip" data-t="120">2 分</button>
+            <button type="button" class="chip" data-t="180">3 分</button>
+            <button type="button" class="chip" data-t="300">5 分</button>
+            <button type="button" class="chip" data-t="600">10 分</button>
+          </div>
+        </div>
+      </div>
+      <div class="meter">
+        <div class="meter-top"><b id="countText">這段會出 45 題</b><span class="badge" id="speedBadge">節奏：挑戰</span></div>
+        <div class="ticks" id="ticks" aria-hidden="true"></div>
+        <p class="hint" style="margin-top:9px">顏色代表模式，可以看出混搭後的分布。</p>
+      </div>
+    </section>
+
+    <section class="card" id="cfgArrow" hidden>
+      <h2>➡️ 箭頭設定</h2>
+      <p class="lead">每個方向配一個動作。留白的方向不會出現在題目裡。</p>
+      <h3>玩法</h3>
+      <div class="seg" id="arrowStyleSeg">
+        <button type="button" data-v="single" aria-pressed="true">單一箭頭</button>
+        <button type="button" data-v="dual">左右雙箭頭</button>
+        <button type="button" data-v="stroop">字與箭頭不一致</button>
+      </div>
+      <div class="subcard" id="arrowStroopBox" hidden>
+        <b>不一致時要聽誰的</b>
+        <div class="seg" id="arrowRuleSeg">
+          <button type="button" data-v="arrow" aria-pressed="true">看箭頭方向</button>
+          <button type="button" data-v="text">看中間的字</button>
+        </div>
+        <p class="hint" style="margin-top:9px">箭頭指下、中間寫「上」，兩者衝突。這是抑制干擾的經典設計，先練「看箭頭」，熟了再換「看字」。</p>
+      </div>
+      <p class="hint" id="arrowStyleHint" style="margin-top:10px"></p>
+      <div id="arrowMap"></div>
+      <h3>箭頭顏色</h3>
+      <div class="seg" id="arrowColorSeg">
+        <button type="button" data-v="ink" aria-pressed="true">深色（單色）</button>
+        <button type="button" data-v="orange">橘色（單色）</button>
+        <button type="button" data-v="teal">藍綠（單色）</button>
+        <button type="button" data-v="random">隨機四色</button>
+      </div>
+      <label class="switch"><span class="txtwrap"><b>紅色箭頭要做「相反方向」</b><em>抑制控制練習：看到紅色時反著做，難度會明顯拉高</em></span><input type="checkbox" id="arrowInverse"></label>
+    </section>
+
+    <section class="card" id="cfgColor" hidden>
+      <h2>🟥 顏色設定</h2>
+      <p class="lead">預設是「色字不一致」：畫面出現一個顏色字，但字的顏色跟它寫的不一樣。</p>
+      <h3>玩法</h3>
+      <div class="seg" id="colorStyleSeg">
+        <button type="button" data-v="stroop" aria-pressed="true">色字不一致</button>
+        <button type="button" data-v="block">整片色塊（最單純）</button>
+      </div>
+      <div class="subcard" id="colorStroopBox" hidden>
+        <b>不一致時要聽誰的</b>
+        <div class="seg" id="colorRuleSeg">
+          <button type="button" data-v="ink" aria-pressed="true">看字的顏色</button>
+          <button type="button" data-v="word">看字唸什麼</button>
+        </div>
+        <p class="hint" style="margin-top:9px">藍色墨水寫的「紅」字。看顏色比看字義難，因為讀字是自動化歷程，要壓下來。</p>
+      </div>
+      <div id="colorMap"></div>
+    </section>
+
+    <section class="card" id="cfgShape" hidden>
+      <h2>🔺 形狀設定</h2>
+      <p class="lead">畫面出現形狀，學員做對應動作。</p>
+      <h3>玩法</h3>
+      <div class="seg" id="shapeStyleSeg">
+        <button type="button" data-v="single" aria-pressed="true">單一形狀</button>
+        <button type="button" data-v="count">數量決定次數</button>
+      </div>
+      <p class="hint" id="shapeStyleHint" style="margin-top:10px"></p>
+      <div id="shapeMap"></div>
+      <label class="switch"><span class="txtwrap"><b>形狀也隨機換顏色</b><em>只是視覺變化，動作仍看形狀決定；可再加一層干擾</em></span><input type="checkbox" id="shapeColorful"></label>
+    </section>
+
+    <section class="card" id="cfgNumber" hidden>
+      <h2>🔢 數字設定</h2>
+      <p class="lead">選一種玩法。想輪流出現，就多勾幾個。</p>
+      <div class="seg" id="numSubSeg">
+        <button type="button" data-v="clap" aria-pressed="true">拍手幾下</button>
+        <button type="button" data-v="make100">湊成 100</button>
+        <button type="button" data-v="make10">湊成 10</button>
+        <button type="button" data-v="oddeven">單雙數反應</button>
+        <button type="button" data-v="minus7">連續減七</button>
+        <button type="button" data-v="reverse">數字倒著唸</button>
+      </div>
+      <div class="subcard" id="numOddBox" hidden>
+        <b>單雙數各做什麼</b>
+        <div id="oddMap"></div>
+      </div>
+      <div class="subcard" id="numClapBox">
+        <b>拍手上限</b>
+        <div class="seg" id="clapMaxSeg">
+          <button type="button" data-v="5" aria-pressed="true">最多 5 下</button>
+          <button type="button" data-v="8">最多 8 下</button>
+          <button type="button" data-v="10">最多 10 下</button>
+        </div>
+        <p class="hint" style="margin-top:9px">動作詞可以改成別的，例如「踏步」「拍大腿」。</p>
+        <input class="txt" id="clapVerb" value="拍手" style="margin-top:8px;max-width:200px">
+      </div>
+    </section>
+
+    <section class="card" id="cfgMath" hidden>
+      <h2>➕ 算式設定</h2>
+      <p class="lead">出算式、學員說答案，時間到自動公布。</p>
+      <div class="seg" id="mathSeg">
+        <button type="button" data-v="l1" aria-pressed="true">十以內加減</button>
+        <button type="button" data-v="l2">二十以內加減</button>
+        <button type="button" data-v="l3">兩位數加減</button>
+        <button type="button" data-v="l4">九九乘法</button>
+      </div>
+      <label class="switch"><span class="txtwrap"><b>穿插「找缺項」題</b><em>出成 5 ＋ ? ＝ 12，要倒推，比直接算難一階</em></span><input type="checkbox" id="mathMissing"></label>
+      <p class="hint" style="margin-top:10px">多選會混合出題。算式建議每題至少 6 秒，含缺項題建議 8 秒。</p>
+    </section>
+
+    <section class="card" id="cfgWord" hidden>
+      <h2>🔤 詞彙設定</h2>
+      <p class="lead">出一個詞，學員說出對應的詞。</p>
+      <div class="seg" id="wordSeg">
+        <button type="button" data-v="opposite" aria-pressed="true">相反詞</button>
+        <button type="button" data-v="category">同類詞聯想</button>
+        <button type="button" data-v="action">生活動作模仿</button>
+        <button type="button" data-v="fluency">開頭字造詞</button>
+      </div>
+      <h3>自訂詞庫（選填）</h3>
+      <textarea class="txt" id="wordCustom" spellcheck="false" style="min-height:100px;line-height:1.7"
+        placeholder="一行一題，格式：題目 = 答案&#10;大 = 小&#10;水果 = 香蕉、蘋果、芭樂"></textarea>
+    </section>
+
+    <section class="card">
+      <h2>🎬 播放選項</h2>
+      <h3>動作提示什麼時候出現</h3>
+      <div class="seg" id="revealSeg">
+        <button type="button" data-v="delay" aria-pressed="true">倒數後才公布</button>
+        <button type="button" data-v="always">一開始就顯示</button>
+        <button type="button" data-v="never">完全不顯示</button>
+      </div>
+      <p class="hint" style="margin-top:9px">第一次帶用「一開始就顯示」讓大家熟規則，熟了再改「倒數後才公布」。</p>
+      <h3>雙重任務</h3>
+      <label class="switch"><span class="txtwrap"><b>全程加做一個背景動作</b><em>一邊持續踏步一邊反應，是跌倒預防最接近真實生活的練習</em></span><input type="checkbox" id="dualTask"></label>
+      <input class="txt" id="dualText" value="原地踏步" style="margin-top:9px;max-width:230px">
+
+      <label class="switch"><span class="txtwrap"><b>節拍器</b><em>給一個穩定的拍子，長輩才踩得住節奏，不會愈踏愈快或愈踏愈慢</em></span><input type="checkbox" id="metronome"></label>
+      <div class="subcard" id="metroBox" hidden>
+        <b>拍速</b>
+        <div style="display:flex;align-items:center;gap:12px">
+          <input type="range" id="bpm" min="60" max="240" step="1" value="96">
+          <div class="readout" id="bpmVal">96<span>BPM</span></div>
+        </div>
+        <div class="chips" id="bpmChips">
+          <button type="button" class="chip" data-b="60">60 慢</button>
+          <button type="button" class="chip" data-b="76">76</button>
+          <button type="button" class="chip" data-b="96">96 常用</button>
+          <button type="button" class="chip" data-b="120">120</button>
+          <button type="button" class="chip" data-b="152">152</button>
+          <button type="button" class="chip" data-b="184">184 快</button>
+        </div>
+        <label class="switch"><span class="txtwrap"><b>每四拍加重一下</b><em>聽得出小節，做左右交替的動作比較好抓</em></span><input type="checkbox" id="metroAccent" checked></label>
+        <div style="margin-top:11px;display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" id="metroTest">試聽 8 拍</button>
+        </div>
+        <p class="hint" style="margin-top:10px">坐姿踏步 60–80、站姿一般踏步 90–110、想拉高心率 120 以上。長輩第一次接觸從 76 開始。</p>
+      </div>
+
+      <h3>聲音</h3>
+      <label class="switch"><span class="txtwrap"><b>畫面下方顯示對照表</b><em>把規則一直放在螢幕上，長輩不用記</em></span><input type="checkbox" id="showLegend" checked></label>
+      <label class="switch"><span class="txtwrap"><b>換題提示音</b><em>短音提示，戴助聽器的長輩比較好跟上</em></span><input type="checkbox" id="sound" checked></label>
+
+      <label class="switch"><span class="txtwrap"><b>背景音樂</b><em>播放時循環播放一首 YouTube 音樂，可自己換</em></span><input type="checkbox" id="music"></label>
+      <div class="subcard" id="musicBox" hidden>
+        <b>YouTube 連結</b>
+        <input class="txt" id="musicUrl" spellcheck="false" placeholder="https://youtu.be/…">
+        <div style="display:flex;align-items:center;gap:12px;margin-top:12px">
+          <div style="flex:1"><label for="musicVol" style="margin-bottom:4px">音量</label>
+            <input type="range" id="musicVol" min="0" max="100" step="5" value="35"></div>
+          <div class="readout" id="musicVolVal">35<span>%</span></div>
+        </div>
+        <div style="margin-top:11px;display:flex;gap:9px;flex-wrap:wrap">
+          <button class="btn btn-ghost btn-sm" id="musicTest">試播</button>
+          <button class="btn btn-ghost btn-sm" id="musicStop">停止試播</button>
+        </div>
+        <p class="hint" style="margin-top:10px">音樂由 YouTube 播放器循環播放，需要連上網路；若影片被設為禁止嵌入就放不出來，換一個連結即可。音量建議壓在 40% 以下，不要蓋過你的口令。</p>
+      </div>
+
+      <h3>其他</h3>
+      <label class="switch"><span class="txtwrap"><b>每次隨機順序</b><em>同一班上第二次時不會照舊排序</em></span><input type="checkbox" id="random" checked></label>
+    </section>
+
+    <section class="card">
+      <h2>⚡ 快速模式</h2>
+      <p class="lead">點一下套用整組設定，再依現場微調。</p>
+      <div class="presets">
+        <div class="preset"><b>暖身｜箭頭跟做</b><p>5 秒・3 分・只有箭頭・提示全開</p><button class="btn btn-ghost btn-sm" data-preset="warm" data-label="暖身｜箭頭跟做">套用</button></div>
+        <div class="preset"><b>手腦並用</b><p>4 秒・3 分・箭頭＋顏色＋數字</p><button class="btn btn-ghost btn-sm" data-preset="mix" data-label="手腦並用">套用</button></div>
+        <div class="preset"><b>算術醒腦</b><p>7 秒・3 分・算式＋數字湊百</p><button class="btn btn-ghost btn-sm" data-preset="math" data-label="算術醒腦">套用</button></div>
+        <div class="preset"><b>高挑戰｜反向</b><p>3 秒・2 分・全模式＋紅色反向</p><button class="btn btn-ghost btn-sm" data-preset="hard" data-label="高挑戰｜反向">套用</button></div>
+        <div class="preset"><b>抑制干擾｜不一致</b><p>5 秒・3 分・箭頭＋顏色 Stroop</p><button class="btn btn-ghost btn-sm" data-preset="stroop" data-label="抑制干擾｜不一致">套用</button></div>
+        <div class="preset"><b>雙重任務｜邊走邊想</b><p>5 秒・3 分・全程踏步＋雙箭頭</p><button class="btn btn-ghost btn-sm" data-preset="dual" data-label="雙重任務｜邊走邊想">套用</button></div>
+        <div class="preset"><b>語言口語｜開口說</b><p>8 秒・3 分・詞彙四種玩法全開</p><button class="btn btn-ghost btn-sm" data-preset="speech" data-label="語言口語｜開口說">套用</button></div>
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>⭐ 收藏這組設定</h2>
+      <p class="lead">固定班級存起來，下次點一下就回到同樣的玩法。</p>
+      <div class="row" style="align-items:end">
+        <div><label for="presetName">收藏名稱</label><input class="txt" id="presetName" placeholder="例如：週三據點 A 班"></div>
+        <div style="display:flex;gap:9px"><button class="btn btn-orange" style="flex:1" onclick="savePreset()">收藏目前設定</button><button class="btn btn-ghost" onclick="resetDefault()">回到預設</button></div>
+      </div>
+      <div id="presetList" style="margin-top:13px;display:flex;flex-direction:column;gap:9px"></div>
+      <div class="notice">
+        <b>收藏只留在這一台裝置的這個瀏覽器裡。</b><br>
+        用手機存的收藏，換到電腦或平板不會出現；換瀏覽器、清除瀏覽紀錄、開無痕視窗，一樣讀不到。<br>
+        <b>帶團請固定用同一台裝置</b>；真的要換，就用下面的「下載設定檔」，到新裝置「讀取設定檔」還原。
+      </div>
+    </section>
+
+    <section class="card">
+      <h2>💾 設定檔</h2>
+      <p class="lead">把整組設定和題目清單存成一個檔案，換裝置、給同事都用它。</p>
+      <div style="display:flex;gap:9px;flex-wrap:wrap">
+        <button class="btn btn-ink" onclick="downloadConfig()">⬇ 下載設定檔</button>
+        <button class="btn btn-teal" onclick="document.getElementById('cfgFile').click()">⬆ 讀取設定檔</button>
+        <input type="file" id="cfgFile" accept=".json,application/json" hidden>
+      </div>
+      <p class="hint" id="cfgStat" style="margin-top:11px">下載的 config.json 內含所有模式設定、對應動作與這一輪的完整題目清單。</p>
+    </section>
+  </div>
+
+  <div class="col side">
+    <section class="summary">
+      <h2>目前設定</h2>
+      <div class="headline" id="sumTitle">4 秒／題・3 分</div>
+      <div class="metas">
+        <span id="sumCount">45 題</span>
+        <span id="sumModes">箭頭・數字</span>
+      </div>
+      <div class="stage-mini">
+        <div class="vis" id="mVis"></div>
+        <div class="act" id="mAct"></div>
+      </div>
+      <div class="mini-bar"><i id="mBar"></i></div>
+      <p class="note">上面是題庫試跑，實際播放會放到整個螢幕。</p>
+      <div class="side-actions">
+        <button class="btn btn-orange" onclick="startPlay()">▶ 開始播放</button>
+        <button class="btn btn-ghost" onclick="printSheet()">列印題目單</button>
+      </div>
+    </section>
+  </div>
+</main>
+
+<div class="player" id="player" role="dialog" aria-modal="true" aria-label="反應動作播放">
+  <div class="p-head">
+    <span class="count" id="pCount">第 1 / 45 題</span>
+    <span class="spacer"></span>
+    <button class="p-close" id="pMute" onclick="toggleMute()" title="全部靜音">🔊</button>
+    <span class="secpill" id="pSec">4</span>
+    <span class="count" id="pClock">00:00</span>
+    <button class="p-close" onclick="stopPlay()">✕ 結束</button>
+  </div>
+  <div class="p-progress"><i id="pProg"></i></div>
+  <div class="p-stage" id="pStage">
+    <div class="p-inner" id="pInner">
+      <div class="p-vis" id="pVis"></div>
+      <div class="p-prompt" id="pPrompt">準備好了嗎</div>
+      <div class="p-answer" id="pAnswer"></div>
+    </div>
+    <svg class="ring" id="pRing" viewBox="0 0 100 100" aria-hidden="true">
+      <circle class="bg" cx="50" cy="50" r="42"></circle>
+      <circle class="fg" id="pRingFg" cx="50" cy="50" r="42"></circle>
+      <text x="50" y="52" id="pRingTxt">4</text>
+    </svg>
+  </div>
+  <div class="dualbar" id="pDual"></div>
+  <div class="legend" id="pLegend"></div>
+  <div class="p-foot">
+    <button class="btn btn-ghost" onclick="prevItem()">◀ 上一題</button>
+    <button class="btn btn-ink" id="pPause" onclick="togglePause()">⏸ 暫停</button>
+    <button class="btn btn-teal" onclick="revealNow()">公布動作</button>
+    <button class="btn btn-orange" onclick="nextItem()">下一題 ▶</button>
+    <p class="p-keys">空白鍵 暫停／繼續　←→ 換題　Enter 公布　Esc 結束</p>
+    <p class="p-tap">輕點畫面中央：公布答案／換下一題</p>
+  </div>
+</div>
+
+<div id="ytHost" aria-hidden="true"></div>
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+<script>
+/* ==================== 常數 ==================== */
+const COLORS={red:{n:"紅",v:"#E03B2E"},blue:{n:"藍",v:"#1F6FB2"},green:{n:"綠",v:"#2E9E5B"},yellow:{n:"黃",v:"#F0B429"}};
+const DIRS={up:{n:"上",deg:0},right:{n:"右",deg:90},down:{n:"下",deg:180},left:{n:"左",deg:270}};
+const OPP={up:"down",down:"up",left:"right",right:"left"};
+const SHAPES={circle:"圓形",square:"正方形",triangle:"三角形",star:"星形"};
+const MODE_NAME={arrow:"箭頭",color:"顏色",shape:"形狀",number:"數字",math:"算式",word:"詞彙"};
+const MODE_TINT={arrow:"#12343B",color:"#E03B2E",shape:"#7B4FA8",number:"#028090",math:"#E8552D",word:"#F4A93C"};
+const ACTIONS=["拍手一下","拍手兩下","舉右手","舉左手","雙手上舉","踏右腳","踏左腳","原地踏步","拍大腿",
+  "聳肩","轉頭向右","轉頭向左","站起來","比讚","握拳","張開手掌","摸鼻子","摸耳朵","拍肩膀","不要動"];
+
+const OPPOSITES=[["大","小"],["長","短"],["高","矮"],["多","少"],["快","慢"],["熱","冷"],["亮","暗"],["輕","重"],
+["前","後"],["上","下"],["新","舊"],["早","晚"],["遠","近"],["硬","軟"],["買","賣"],["哭","笑"],["站","坐"],["推","拉"],
+["快樂","難過"],["乾淨","骯髒"],["開始","結束"],["成功","失敗"],["安全","危險"],["白天","晚上"],["溫暖","寒冷"],
+["安靜","吵鬧"],["簡單","困難"],["記得","忘記"],["健康","生病"],["便宜","昂貴"],["前進","後退"],["喜歡","討厭"],
+["年輕","年老"],["勤勞","懶惰"],["積極","消極"],["節約","浪費"],["謙虛","驕傲"],["勇敢","膽小"],["樂觀","悲觀"],["增加","減少"]];
+const ACTWORDS=["刷牙","洗臉","梳頭","吃飯","喝水","穿衣服","穿鞋子","開門","打電話","掃地",
+"擦桌子","洗手","撐傘","騎腳踏車","澆花","看報紙","拍照","揮手道別","綁鞋帶","剪指甲"];
+const FLUENCY=[["大","大家、大門、大聲"],["小","小心、小孩、小狗"],["水","水果、水桶、水壺"],
+["花","花生、花園、花瓶"],["天","天氣、天空、天亮"],["手","手機、手錶、手套"],["車","車站、車票、車庫"],
+["火","火車、火鍋、火柴"],["心","心情、心願、心臟"],["家","家人、家鄉、家庭"],["白","白飯、白雲、白天"],
+["老","老師、老人、老闆"],["電","電視、電話、電風扇"],["飯","飯店、飯桌、飯糰"]];
+const CATEGORIES=[["水果","香蕉、蘋果、芭樂"],["蔬菜","高麗菜、菠菜、蘿蔔"],["交通工具","公車、火車、腳踏車"],
+["身體部位","手、腳、眼睛"],["家電","電風扇、冰箱、電視"],["動物","狗、貓、牛"],["顏色","紅色、藍色、黃色"],
+["天氣","晴天、下雨、颱風"],["節日","過年、端午、中秋"],["台灣小吃","滷肉飯、蚵仔煎、肉圓"],
+["廚房用品","碗、筷子、鍋子"],["花","玫瑰、百合、桂花"],["樂器","二胡、鋼琴、鼓"],["職業","醫師、老師、農夫"],
+["飲料","茶、豆漿、咖啡"],["衣物","外套、褲子、帽子"]];
+
+/* ==================== 儲存 ==================== */
+const store=(function(){
+  let mem={},ok=false;
+  try{localStorage.setItem("__t","1");localStorage.removeItem("__t");ok=true}catch(e){ok=false}
+  return{ok,
+    get:function(k){try{return ok?localStorage.getItem(k):(k in mem?mem[k]:null)}catch(e){return k in mem?mem[k]:null}},
+    set:function(k,v){try{ok?localStorage.setItem(k,v):(mem[k]=v)}catch(e){mem[k]=v}},
+    del:function(k){try{ok?localStorage.removeItem(k):delete mem[k]}catch(e){delete mem[k]}}};
+})();
+const $=function(id){return document.getElementById(id)};
+const esc=function(s){return String(s).replace(/[&<>"]/g,function(c){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]})};
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;const t=a[i];a[i]=a[j];a[j]=t}return a}
+function pick(a){return a[Math.random()*a.length|0]}
+function ri(min,max){return min+Math.floor(Math.random()*(max-min+1))}
+
+/* ==================== 狀態 ==================== */
+const DEFAULTS={
+  sec:4,total:180,
+  modes:{arrow:true,color:false,shape:false,number:true,math:false,word:false},
+  arrowMap:{up:"雙手上舉",right:"舉右手",down:"拍大腿",left:"舉左手"},
+  arrowColor:"ink",arrowInverse:false,arrowStyle:"single",arrowRule:"arrow",
+  colorMap:{red:"拍手兩下",blue:"踏右腳",green:"雙手上舉",yellow:"聳肩"},
+  colorStyle:"stroop",colorRule:"ink",
+  shapeMap:{circle:"拍手一下",square:"拍大腿",triangle:"舉右手",star:"站起來"},
+  shapeColorful:false,shapeStyle:"single",
+  numSubs:{clap:true,make100:false,make10:false,oddeven:false,minus7:false,reverse:false},
+  clapMax:5,clapVerb:"拍手",oddMap:{odd:"拍手",even:"舉手"},
+  mathLv:{l1:true,l2:false,l3:false,l4:false},mathMissing:false,
+  wordKinds:{opposite:true,category:false,action:false,fluency:false},wordCustom:"",
+  reveal:"delay",showLegend:true,sound:true,random:true,dualTask:false,dualText:"原地踏步",
+  metronome:false,bpm:96,metroAccent:true,
+  music:false,musicUrl:"https://youtu.be/d9WsJ-mzbho",musicVol:35
+};
+let S=JSON.parse(JSON.stringify(DEFAULTS));
+let deck=[];
+
+let toastTimer;
+function toast(m){const t=$("toast");t.textContent=m;t.classList.add("on");
+  clearTimeout(toastTimer);toastTimer=setTimeout(function(){t.classList.remove("on")},2400)}
+
+/* ==================== 圖形 ==================== */
+// 只有側欄小預覽會傳 size；播放器不傳，尺寸完全交給 CSS 決定
+function hAttr(size){return size?' style="height:'+size+'px"':''}
+function arrowSVG(color,deg,size){
+  return '<svg viewBox="0 0 200 200"'+hAttr(size)+' aria-hidden="true">'+
+    '<g transform="rotate('+deg+' 100 100)"><path d="M100 18 L172 100 L130 100 L130 184 L70 184 L70 100 L28 100 Z" fill="'+color+'"/></g></svg>';
+}
+function arrowWordSVG(color,deg,word,size){
+  return '<svg viewBox="0 0 200 200"'+hAttr(size)+' aria-hidden="true">'+
+    '<g transform="rotate('+deg+' 100 100)"><path d="M100 18 L172 100 L130 100 L130 184 L70 184 L70 100 L28 100 Z" fill="'+color+'"/></g>'+
+    '<text x="100" y="118" text-anchor="middle" dominant-baseline="middle" fill="#fff" '+
+    'font-size="66" font-weight="900" font-family="Noto Sans TC,Microsoft JhengHei,sans-serif">'+word+'</text></svg>';
+}
+function starPoints(cx,cy,R,r){
+  let p=[];
+  for(let i=0;i<10;i++){
+    const rad=(i%2?r:R),a=(Math.PI/5)*i-Math.PI/2;
+    p.push((cx+rad*Math.cos(a)).toFixed(1)+","+(cy+rad*Math.sin(a)).toFixed(1));
+  }
+  return p.join(" ");
+}
+function shapeSVG(kind,color,size){
+  let body="";
+  if(kind==="circle")body='<circle cx="100" cy="100" r="82" fill="'+color+'"/>';
+  else if(kind==="square")body='<rect x="20" y="20" width="160" height="160" rx="14" fill="'+color+'"/>';
+  else if(kind==="triangle")body='<polygon points="100,16 184,178 16,178" fill="'+color+'"/>';
+  else body='<polygon points="'+starPoints(100,104,88,36)+'" fill="'+color+'"/>';
+  return '<svg viewBox="0 0 200 200"'+hAttr(size)+' aria-hidden="true">'+body+'</svg>';
+}
+function colorSVG(hex,size){
+  return '<svg class="colorblock" viewBox="0 0 240 160"'+hAttr(size)+' aria-hidden="true">'+
+    '<rect x="6" y="6" width="228" height="148" rx="22" fill="'+hex+'"/></svg>';
+}
+const ARROW_TINT={ink:"#12343B",orange:"#E8552D",teal:"#028090"};
+
+/* ==================== 出題 ==================== */
+function activeModes(){return Object.keys(S.modes).filter(function(k){return S.modes[k]})}
+
+function genArrow(){
+  const dirs=Object.keys(DIRS).filter(function(d){return (S.arrowMap[d]||"").trim()});
+  if(!dirs.length)return null;
+  if(S.arrowStyle==="dual"&&dirs.length>=2){
+    const a=pick(dirs);let b=pick(dirs);
+    const c1=S.arrowColor==="random"?pick(Object.keys(COLORS).map(function(k){return COLORS[k].v})):(ARROW_TINT[S.arrowColor]||ARROW_TINT.ink);
+    return{mode:"arrow",vis:{t:"arrow2",left:{deg:DIRS[a].deg,color:c1},right:{deg:DIRS[b].deg,color:c1}},
+      prompt:"左手看左邊、右手看右邊",label:"左"+DIRS[a].n+"／右"+DIRS[b].n,
+      answer:"左手 "+S.arrowMap[a]+"　右手 "+S.arrowMap[b]};
+  }
+  if(S.arrowStyle==="stroop"&&dirs.length>=2){
+    const shown=pick(dirs);let word=shown;
+    if(Math.random()<0.7){let guard=0;while(word===shown&&guard++<20)word=pick(dirs)}
+    const conflict=word!==shown;
+    const useDir=S.arrowRule==="text"?word:shown;
+    const c=S.arrowColor==="random"?pick(Object.keys(COLORS).map(function(k){return COLORS[k].v})):(ARROW_TINT[S.arrowColor]||ARROW_TINT.ink);
+    return{mode:"arrow",vis:{t:"arrowWord",deg:DIRS[shown].deg,color:c,word:DIRS[word].n},
+      prompt:S.arrowRule==="text"?"看中間的字，不看箭頭":"看箭頭方向，不看字",
+      label:"箭頭"+DIRS[shown].n+"／字"+DIRS[word].n,answer:S.arrowMap[useDir],warn:conflict};
+  }
+  const d=pick(dirs);
+  let inverse=false,color;
+  if(S.arrowInverse&&Math.random()<0.3){inverse=true;color=COLORS.red.v}
+  else if(S.arrowColor==="random")color=pick(Object.keys(COLORS).filter(function(k){return k!=="red"||!S.arrowInverse}).map(function(k){return COLORS[k].v}));
+  else color=ARROW_TINT[S.arrowColor]||ARROW_TINT.ink;
+  let ansDir=d;
+  if(inverse){const o=OPP[d];if((S.arrowMap[o]||"").trim())ansDir=o}
+  return{mode:"arrow",vis:{t:"arrow",color:color,deg:DIRS[d].deg},
+    prompt:inverse?"紅色！請做相反方向":"看箭頭方向做動作",
+    label:"箭頭向"+DIRS[d].n+(inverse?"（紅色→反向）":""),
+    answer:S.arrowMap[ansDir],warn:inverse};
+}
+function genColor(){
+  const ks=Object.keys(COLORS).filter(function(k){return (S.colorMap[k]||"").trim()});
+  if(!ks.length)return null;
+  if(S.colorStyle==="stroop"&&ks.length>=2){
+    const ink=pick(ks);let word=ink;
+    // 約七成不一致、三成一致：全部都不一致的話，長輩會學到「永遠不看字」，干擾效果就沒了
+    if(Math.random()<0.7){let guard=0;while(word===ink&&guard++<20)word=pick(ks)}
+    const conflict=word!==ink;
+    const use=S.colorRule==="word"?word:ink;
+    return{mode:"color",vis:{t:"colorWord",text:COLORS[word].n,color:COLORS[ink].v},
+      prompt:S.colorRule==="word"?"看這個字唸什麼，不看顏色":"看字的顏色，不看它寫什麼",
+      label:"字"+COLORS[word].n+"／色"+COLORS[ink].n,answer:S.colorMap[use],warn:conflict};
+  }
+  const k=pick(ks);
+  return{mode:"color",vis:{t:"color",color:COLORS[k].v},prompt:"看顏色做動作",
+    label:COLORS[k].n+"色",answer:S.colorMap[k]};
+}
+function genShape(){
+  const ks=Object.keys(SHAPES).filter(function(k){return (S.shapeMap[k]||"").trim()});
+  if(!ks.length)return null;
+  const k=pick(ks);
+  const c=S.shapeColorful?pick(Object.keys(COLORS).map(function(x){return COLORS[x].v})):"#12343B";
+  if(S.shapeStyle==="count"){
+    const n=ri(1,4);
+    return{mode:"shape",vis:{t:"shapes",kind:k,color:c,n:n},prompt:"形狀決定動作，數量決定次數",
+      label:SHAPES[k]+" ×"+n,answer:S.shapeMap[k]+" "+n+" 次"};
+  }
+  return{mode:"shape",vis:{t:"shape",kind:k,color:c},prompt:"看形狀做動作",
+    label:SHAPES[k],answer:S.shapeMap[k]};
+}
+function genNumber(){
+  const subs=Object.keys(S.numSubs).filter(function(k){return S.numSubs[k]});
+  if(!subs.length)return null;
+  const s=pick(subs);
+  if(s==="clap"){
+    const n=ri(1,S.clapMax);
+    return{mode:"number",vis:{t:"num",text:String(n)},prompt:S.clapVerb+"幾下？",
+      label:"數字 "+n,answer:S.clapVerb+" "+n+" 下"};
+  }
+  if(s==="make100"){
+    const n=ri(1,19)*5;
+    return{mode:"number",vis:{t:"num",text:String(n)},prompt:"加多少等於 100？",
+      label:"湊百 "+n,answer:String(100-n)};
+  }
+  if(s==="make10"){
+    const n=ri(1,9);
+    return{mode:"number",vis:{t:"num",text:String(n)},prompt:"加多少等於 10？",
+      label:"湊十 "+n,answer:String(10-n)};
+  }
+  if(s==="minus7"){
+    const n=ri(30,99);
+    return{mode:"number",vis:{t:"num",text:String(n)},prompt:"減 7 是多少？",
+      label:"減七 "+n,answer:String(n-7)};
+  }
+  if(s==="reverse"){
+    const dg=[ri(1,9),ri(1,9),ri(1,9)].join("");
+    return{mode:"number",vis:{t:"num",text:dg},prompt:"倒著唸出來",
+      label:"倒念 "+dg,answer:dg.split("").reverse().join("")};
+  }
+  const n=ri(1,99),odd=n%2===1;
+  return{mode:"number",vis:{t:"num",text:String(n)},prompt:"單數"+S.oddMap.odd+"、雙數"+S.oddMap.even,
+    label:(odd?"單數 ":"雙數 ")+n,answer:odd?S.oddMap.odd:S.oddMap.even};
+}
+function genMath(){
+  const lv=Object.keys(S.mathLv).filter(function(k){return S.mathLv[k]});
+  if(!lv.length)return null;
+  const l=pick(lv);let a,b,op,res;
+  if(l==="l4"){a=ri(2,9);b=ri(2,9);op="×";res=a*b}
+  else{
+    const max=l==="l1"?9:(l==="l2"?20:99),min=l==="l3"?10:1;
+    op=Math.random()<0.5?"＋":"－";
+    if(op==="＋"){a=ri(min,max);b=ri(min,Math.max(min,max-a));if(b<min)b=min;res=a+b}
+    else{a=ri(min+1,max);b=ri(min,a-1);res=a-b}
+  }
+  if(S.mathMissing&&Math.random()<0.4)
+    return{mode:"math",vis:{t:"expr",text:a+" "+op+" ? ＝ "+res},prompt:"中間少了哪一個數字？",
+      label:a+op+"? = "+res,answer:String(b)};
+  return{mode:"math",vis:{t:"expr",text:a+" "+op+" "+b+" ＝ ?"},prompt:"算出答案，大聲說出來",
+    label:a+op+b,answer:String(res)};
+}
+function genWord(){
+  if(S.wordCustom.trim()){
+    const rows=S.wordCustom.split("\n").map(function(l){return l.trim()}).filter(Boolean).map(function(l){
+      const p=l.split(/[=＝]/);return{w:(p[0]||"").trim(),a:(p[1]||"").trim()}}).filter(function(x){return x.w});
+    if(rows.length){const r=pick(rows);
+      return{mode:"word",vis:{t:"word",text:r.w},prompt:"說出對應的詞",label:r.w,answer:r.a}}
+  }
+  const kinds=Object.keys(S.wordKinds).filter(function(k){return S.wordKinds[k]});
+  if(!kinds.length)return null;
+  const kind=pick(kinds);
+  if(kind==="opposite"){
+    const p=pick(OPPOSITES);
+    return{mode:"word",vis:{t:"word",text:p[0]},prompt:"說出它的相反詞",label:p[0],answer:p[1]};
+  }
+  if(kind==="action"){
+    const a=pick(ACTWORDS);
+    return{mode:"word",vis:{t:"word",text:a},prompt:"用動作做出來給大家看",label:a,answer:"做出「"+a+"」的動作"};
+  }
+  if(kind==="fluency"){
+    const f=pick(FLUENCY);
+    return{mode:"word",vis:{t:"word",text:f[0]},prompt:"說出三個這個字開頭的詞",label:f[0]+"…",answer:f[1]};
+  }
+  const c=pick(CATEGORIES);
+  return{mode:"word",vis:{t:"word",text:c[0]},prompt:"說出三個這一類的東西",label:c[0],answer:c[1]};
+}
+const GEN={arrow:genArrow,color:genColor,shape:genShape,number:genNumber,math:genMath,word:genWord};
+
+function itemCount(){return Math.max(3,Math.round(S.total/S.sec))}
+function buildDeck(){
+  const ms=activeModes().filter(function(m){return GEN[m]()!==null});
+  const n=itemCount(),out=[];
+  if(!ms.length)return[{mode:"arrow",vis:{t:"word",text:"未設定"},prompt:"請先勾選模式並填好對應動作",label:"未設定",answer:""}];
+  let bag=[];
+  for(let i=0;i<n;i++){
+    if(!bag.length){bag=ms.slice();if(S.random||ms.length>1)shuffle(bag)}
+    const m=bag.pop();
+    const it=GEN[m]();
+    if(it)out.push(it);else i--;
+  }
+  return out;
+}
+
+/* ==================== 對應表 UI ==================== */
+function actionInput(val,onchange){
+  return '<input class="txt" list="actionList" value="'+esc(val||"")+'" '+
+    'oninput="'+onchange+'" placeholder="留白＝這一項不出題">';
+}
+function renderMaps(){
+  $("arrowMap").innerHTML=Object.keys(DIRS).map(function(d){
+    return '<div class="maprow"><div class="mapkey">'+arrowSVG("#12343B",DIRS[d].deg,26)+DIRS[d].n+'</div>'+
+      actionInput(S.arrowMap[d],"setMap(&quot;arrowMap&quot;,&quot;"+d+"&quot;,this.value)")+'</div>'}).join("");
+  $("colorMap").innerHTML=Object.keys(COLORS).map(function(k){
+    return '<div class="maprow"><div class="mapkey"><span class="swatch" style="background:'+COLORS[k].v+'"></span>'+COLORS[k].n+'</div>'+
+      actionInput(S.colorMap[k],"setMap(&quot;colorMap&quot;,&quot;"+k+"&quot;,this.value)")+'</div>'}).join("");
+  $("shapeMap").innerHTML=Object.keys(SHAPES).map(function(k){
+    return '<div class="maprow"><div class="mapkey">'+shapeSVG(k,"#12343B",24)+'</div>'+
+      actionInput(S.shapeMap[k],"setMap(&quot;shapeMap&quot;,&quot;"+k+"&quot;,this.value)")+'</div>'}).join("");
+  $("oddMap").innerHTML=[["odd","單數"],["even","雙數"]].map(function(p){
+    return '<div class="maprow"><div class="mapkey">'+p[1]+'</div>'+
+      actionInput(S.oddMap[p[0]],"setMap(&quot;oddMap&quot;,&quot;"+p[0]+"&quot;,this.value)")+'</div>'}).join("");
+}
+function setMap(group,key,val){S[group][key]=val;update()}
+
+/* ==================== 更新 ==================== */
+let miniTimer=null;
+function update(save){
+  if(save===undefined)save=true;
+  deck=buildDeck();
+  const n=deck.length,ms=activeModes();
+  $("secVal").innerHTML=S.sec+'<span>秒</span>';
+  const m=Math.floor(S.total/60),r=S.total%60;
+  $("totalVal").innerHTML=(m?m:S.total)+'<span>'+(m?(r?" 分 "+r+" 秒":"分"):"秒")+'</span>';
+  $("countText").textContent="這段會出 "+n+" 題";
+  $("speedBadge").textContent=S.sec<=3?"節奏：高挑戰":S.sec<=5?"節奏：挑戰":S.sec<=8?"節奏：一般":"節奏：慢速友善";
+  $("ticks").innerHTML=deck.slice(0,60).map(function(it){
+    return '<i class="tick" style="background:'+MODE_TINT[it.mode]+'"></i>'}).join("");
+  document.querySelectorAll("#totalChips .chip").forEach(function(b){b.setAttribute("aria-pressed",+b.dataset.t===S.total)});
+  $("modeTag").textContent="已選 "+ms.length+" 種";
+  $("modeWarn").textContent=ms.length===0?"⚠️ 至少要勾一個模式，不然沒有題目。"
+    :ms.length===1?"單一模式：整段都是「"+MODE_NAME[ms[0]]+"」。":"混搭模式："+ms.map(function(k){return MODE_NAME[k]}).join("＋")+"，會隨機交錯出題。";
+  $("sumTitle").textContent=S.sec+" 秒／題・"+timeText(S.total);
+  $("sumCount").textContent=n+" 題";
+  $("sumModes").textContent=ms.length?ms.map(function(k){return MODE_NAME[k]}).join("・"):"未選模式";
+  ["arrow","color","shape","number","math","word"].forEach(function(k){
+    $("cfg"+k.charAt(0).toUpperCase()+k.slice(1)).hidden=!S.modes[k]});
+  $("numOddBox").hidden=!S.numSubs.oddeven;
+  $("numClapBox").hidden=!S.numSubs.clap;
+  $("metroBox").hidden=!S.metronome;
+  $("musicBox").hidden=!S.music;
+  $("bpmVal").innerHTML=S.bpm+'<span>BPM</span>';
+  $("musicVolVal").innerHTML=S.musicVol+'<span>%</span>';
+  document.querySelectorAll("#bpmChips .chip").forEach(function(b){b.setAttribute("aria-pressed",+b.dataset.b===S.bpm)});
+  $("arrowStroopBox").hidden=S.arrowStyle!=="stroop";
+  $("colorStroopBox").hidden=S.colorStyle!=="stroop";
+  $("arrowStyleHint").textContent=S.arrowStyle==="dual"
+    ?"兩個箭頭同時出現，左手做左邊、右手做右邊。雙側不同調的動作，對協調與注意力分配很有效。"
+    :S.arrowStyle==="stroop"?"箭頭裡會出現一個方向字，兩者常常不一致。"
+    :"一次一個箭頭，最單純的版本。";
+  $("shapeStyleHint").textContent=S.shapeStyle==="count"
+    ?"畫面會出現 1～4 個相同形狀：形狀決定做什麼、數量決定做幾次，等於同時處理兩個訊息。"
+    :"一次一個形狀，看形狀做對應動作。";
+  restartMini();
+  if(save)store.set("react_config",JSON.stringify(S));
+}
+function timeText(s){const m=Math.floor(s/60),r=s%60;return m?m+" 分"+(r?" "+r+" 秒":""):s+" 秒"}
+function visHTML(v,size){
+  if(v.t==="arrow")return arrowSVG(v.color,v.deg,size);
+  if(v.t==="arrowWord")return arrowWordSVG(v.color,v.deg,v.word,size);
+  if(v.t==="arrow2")return '<div class="dual"><div class="side"><b>左手</b>'+
+    arrowSVG(v.left.color,v.left.deg,size?size*0.8:null)+'</div><div class="side"><b>右手</b>'+
+    arrowSVG(v.right.color,v.right.deg,size?size*0.8:null)+'</div></div>';
+  if(v.t==="shapes"){let o='<div class="shaperow">';
+    for(let i=0;i<v.n;i++)o+=shapeSVG(v.kind,v.color,size?size*0.62:null);return o+'</div>'}
+  if(v.t==="colorWord")return '<div class="wd" style="color:'+v.color+';--n:'+v.text.length+'">'+esc(v.text)+'</div>';
+  if(v.t==="shape")return shapeSVG(v.kind,v.color,size);
+  if(v.t==="color")return colorSVG(v.color,size);
+  if(v.t==="num")return '<div class="num" style="--n:'+v.text.length+'">'+esc(v.text)+'</div>';
+  if(v.t==="expr")return '<div class="expr">'+esc(v.text)+'</div>';
+  return '<div class="wd" style="--n:'+String(v.text).length+'">'+esc(v.text)+'</div>';
+}
+function restartMini(){
+  clearInterval(miniTimer);
+  let i=0,t=0;
+  const step=function(){
+    const it=deck[i%deck.length];
+    if(t===0){$("mVis").innerHTML=visHTML(it.vis,92);$("mAct").textContent=S.reveal==="always"?(it.answer||""):""}
+    if(S.reveal==="delay"&&t===Math.max(1,Math.floor(S.sec*0.66)))$("mAct").textContent=it.answer||"";
+    $("mBar").style.width=Math.round((t+1)/S.sec*100)+"%";
+    t++;if(t>=S.sec){t=0;i++}
+  };
+  step();miniTimer=setInterval(step,1000);
+}
+
+/* ==================== 播放器 ==================== */
+let P={on:false,done:false,i:0,left:0,dur:4,paused:false,revealed:false,timer:null,startAt:0};
+let audioCtx=null,muted=false;
+function getCtx(){
+  try{audioCtx=audioCtx||new (window.AudioContext||window.webkitAudioContext)();
+    if(audioCtx.state==="suspended")audioCtx.resume();return audioCtx}catch(e){return null}
+}
+
+/* ---- 節拍器：用 Web Audio 排程，不受 setInterval 漂移影響 ---- */
+const MET={on:false,timer:null,next:0,beat:0,stopAt:0};
+function metroClick(t,accent){
+  const ctx=getCtx();if(!ctx)return;
+  const o=ctx.createOscillator(),g=ctx.createGain();
+  o.type="square";o.frequency.value=accent?1560:1040;
+  g.gain.setValueAtTime(0.0001,t);
+  g.gain.exponentialRampToValueAtTime(accent?0.20:0.11,t+0.002);
+  g.gain.exponentialRampToValueAtTime(0.0001,t+0.055);
+  o.connect(g);g.connect(ctx.destination);o.start(t);o.stop(t+0.07);
+}
+function metroSchedule(){
+  const ctx=getCtx();if(!ctx)return;
+  const spb=60/Math.min(240,Math.max(60,S.bpm||96));
+  while(MET.next<ctx.currentTime+0.12){
+    if(MET.stopAt&&MET.beat>=MET.stopAt){metroStop();return}
+    metroClick(MET.next,S.metroAccent&&MET.beat%4===0);
+    MET.next+=spb;MET.beat++;
+  }
+}
+function metroStart(beats){
+  const ctx=getCtx();if(!ctx)return;
+  metroStop();
+  MET.on=true;MET.beat=0;MET.stopAt=beats||0;MET.next=ctx.currentTime+0.1;
+  MET.timer=setInterval(metroSchedule,25);metroSchedule();
+}
+function metroStop(){MET.on=false;MET.stopAt=0;clearInterval(MET.timer);MET.timer=null}
+
+/* ---- 背景音樂：嵌入 YouTube 播放器循環播放 ---- */
+let ytPlayer=null,ytLoading=false;
+function ytId(u){
+  const m=String(u||"").match(/(?:youtu\.be\/|[?&]v=|\/embed\/|\/shorts\/)([A-Za-z0-9_-]{11})/);
+  return m?m[1]:"";
+}
+function loadYTApi(cb){
+  if(window.YT&&window.YT.Player)return cb();
+  if(!document.getElementById("ytapi")){
+    const t=document.createElement("script");t.id="ytapi";t.src="https://www.youtube.com/iframe_api";
+    document.head.appendChild(t);
+  }
+  if(ytLoading)return;
+  ytLoading=true;
+  let n=0;
+  const iv=setInterval(function(){
+    if(window.YT&&window.YT.Player){clearInterval(iv);ytLoading=false;cb()}
+    else if(++n>100){clearInterval(iv);ytLoading=false;toast("連不上 YouTube，音樂無法播放")}
+  },120);
+}
+function ytEnsure(cb){
+  const id=ytId(S.musicUrl);
+  if(!id){toast("這不是有效的 YouTube 連結");return}
+  if(ytPlayer&&ytPlayer.__id===id&&ytPlayer.playVideo)return cb();
+  if(ytPlayer&&ytPlayer.destroy){try{ytPlayer.destroy()}catch(e){}ytPlayer=null;$("ytHost").innerHTML=""}
+  loadYTApi(function(){
+    ytPlayer=new YT.Player("ytHost",{
+      height:"158",width:"280",videoId:id,host:"https://www.youtube-nocookie.com",
+      playerVars:{autoplay:0,controls:0,loop:1,playlist:id,playsinline:1,rel:0,modestbranding:1},
+      events:{
+        onReady:function(e){ytPlayer.__id=id;e.target.setVolume(S.musicVol);cb()},
+        onStateChange:function(e){
+          if(e.data===YT.PlayerState.ENDED){e.target.seekTo(0,true);e.target.playVideo()}
+        },
+        onError:function(){toast("這支影片不能嵌入播放，請換一個連結")}
+      }
+    });
+  });
+}
+function musicPlay(){
+  if(muted)return;
+  ytEnsure(function(){try{ytPlayer.setVolume(S.musicVol);ytPlayer.playVideo()}catch(e){}});
+}
+function musicPause(){try{ytPlayer&&ytPlayer.pauseVideo&&ytPlayer.pauseVideo()}catch(e){}}
+
+/* ---- 播放中一鍵全部靜音 ---- */
+function toggleMute(){
+  muted=!muted;
+  $("pMute").textContent=muted?"🔇":"🔊";
+  if(muted){metroStop();musicPause()}
+  else{
+    if(S.metronome&&!P.paused&&P.on)metroStart();
+    if(S.music&&!P.paused&&P.on)musicPlay();
+  }
+  toast(muted?"已全部靜音":"聲音已開啟");
+}
+
+function beep(freq,dur,vol){
+  if(!S.sound||muted)return;
+  freq=freq||660;dur=dur||.09;vol=vol||.16;
+  const ctx=getCtx();if(!ctx)return;
+  try{
+    const o=ctx.createOscillator(),g=ctx.createGain();
+    o.type="sine";o.frequency.value=freq;g.gain.value=vol;o.connect(g);g.connect(ctx.destination);o.start();
+    g.gain.exponentialRampToValueAtTime(.0001,ctx.currentTime+dur);o.stop(ctx.currentTime+dur+.02);
+  }catch(e){}
+}
+function legendHTML(){
+  if(!S.showLegend)return"";
+  const parts=[];
+  if(S.modes.arrow)Object.keys(DIRS).forEach(function(d){
+    if((S.arrowMap[d]||"").trim())parts.push('<span class="it">'+arrowSVG("#12343B",DIRS[d].deg,18)+esc(S.arrowMap[d])+'</span>')});
+  if(S.modes.color)Object.keys(COLORS).forEach(function(k){
+    if((S.colorMap[k]||"").trim())parts.push('<span class="it"><span class="swatch" style="background:'+COLORS[k].v+'"></span>'+esc(S.colorMap[k])+'</span>')});
+  if(S.modes.shape)Object.keys(SHAPES).forEach(function(k){
+    if((S.shapeMap[k]||"").trim())parts.push('<span class="it">'+shapeSVG(k,"#12343B",18)+esc(S.shapeMap[k])+'</span>')});
+  if(S.modes.number&&S.numSubs.oddeven)parts.push('<span class="it">單數 '+esc(S.oddMap.odd)+'　雙數 '+esc(S.oddMap.even)+'</span>');
+  if(S.modes.arrow&&S.arrowStyle==="stroop")parts.push('<span class="it" style="border-color:'+
+    (S.arrowRule==="text"?"#028090":"#12343B")+'">'+(S.arrowRule==="text"?"聽字，不看箭頭":"看箭頭，不看字")+'</span>');
+  if(S.modes.color&&S.colorStyle==="stroop")parts.push('<span class="it" style="border-color:#028090">'+
+    (S.colorRule==="word"?"唸字，不看顏色":"看顏色，不看字")+'</span>');
+  if(S.modes.shape&&S.shapeStyle==="count")parts.push('<span class="it">形狀＝動作　數量＝次數</span>');
+  if(S.modes.arrow&&S.arrowInverse)parts.push('<span class="it" style="border-color:#E03B2E;color:#E03B2E">紅色＝做相反方向</span>');
+  return parts.join("");
+}
+function startPlay(){
+  if(!activeModes().length)return toast("先勾一個出題模式");
+  deck=buildDeck();
+  P.on=true;P.done=false;P.i=0;P.paused=false;P.dur=S.sec;P.startAt=Date.now();
+  $("pPause").textContent="⏸ 暫停";
+  $("pLegend").innerHTML=legendHTML();
+  $("pDual").innerHTML=S.dualTask&&S.dualText.trim()
+    ?'<span>全程持續：'+esc(S.dualText)+(S.metronome?'　♩ '+S.bpm+' BPM':'')+'</span>':"";
+  $("player").classList.add("on");document.body.style.overflow="hidden";clearInterval(miniTimer);
+  if(document.documentElement.requestFullscreen)document.documentElement.requestFullscreen().catch(function(){});
+  keepAwake();
+  muted=false;$("pMute").textContent="🔊";
+  if(S.metronome)metroStart();
+  if(S.music)musicPlay();
+  showItem(true);scheduleSize();clearInterval(P.timer);P.timer=setInterval(tick,100);
+  if(window.innerWidth<680&&window.innerHeight>window.innerWidth)
+    setTimeout(function(){toast("把手機橫過來，畫面會大一倍")},700);
+}
+function stopPlay(){
+  P.on=false;clearInterval(P.timer);releaseAwake();metroStop();musicPause();
+  $("player").classList.remove("on");document.body.style.overflow="";
+  if(document.fullscreenElement)document.exitFullscreen().catch(function(){});
+  restartMini();
+}
+function showItem(first){
+  const it=deck[P.i];if(!it)return finish();
+  if(!$("pVis"))return;
+  P.left=P.dur;P.revealed=false;
+  const v=$("pVis");
+  v.innerHTML=visHTML(it.vis);
+  v.classList.remove("pop");void v.offsetWidth;v.classList.add("pop");
+  $("pPrompt").textContent=it.prompt;
+  $("pAnswer").innerHTML="";
+  $("pCount").textContent="第 "+(P.i+1)+" / "+deck.length+" 題";
+  $("pProg").style.width=(P.i/deck.length*100)+"%";
+  paintRing(1);
+  scheduleSize();
+  if(S.reveal==="always")revealNow();
+  if(!first)beep(it.warn?520:700);
+}
+function sizeStage(){
+  const v=$("pVis");if(!v)return;
+  const h=v.clientHeight;
+  if(h>60)document.documentElement.style.setProperty("--visH",Math.round(h)+"px");
+}
+let sizeRaf=null;
+function scheduleSize(){
+  cancelAnimationFrame(sizeRaf);
+  sizeRaf=requestAnimationFrame(function(){sizeStage();requestAnimationFrame(sizeStage)});
+}
+window.addEventListener("resize",function(){if(P.on)scheduleSize()});
+window.addEventListener("orientationchange",function(){if(P.on)setTimeout(scheduleSize,250)});
+document.addEventListener("fullscreenchange",function(){if(P.on)setTimeout(scheduleSize,120)});
+
+/* 螢幕保持喚醒：帶團時最怕投影到一半手機鎖屏 */
+let wakeLock=null;
+function keepAwake(){
+  try{if("wakeLock" in navigator)navigator.wakeLock.request("screen").then(function(w){wakeLock=w}).catch(function(){})}catch(e){}
+}
+function releaseAwake(){try{if(wakeLock){wakeLock.release();wakeLock=null}}catch(e){}}
+document.addEventListener("visibilitychange",function(){
+  if(P.on&&!document.hidden&&!wakeLock)keepAwake();
+});
+
+function paintRing(ratio){
+  const c=2*Math.PI*42,fg=$("pRingFg");
+  if(!fg){$("pSec").textContent=Math.max(0,Math.ceil(P.left));return}
+  fg.style.strokeDasharray=c;fg.style.strokeDashoffset=c*(1-ratio);
+  fg.style.stroke=ratio<0.34?"var(--orange)":"var(--teal)";
+  const left=Math.max(0,Math.ceil(P.left));
+  $("pRingTxt").textContent=left;
+  $("pSec").textContent=left;
+}
+function tick(){
+  if(P.paused)return;
+  P.left-=0.1;
+  const s=Math.max(0,Math.round((Date.now()-P.startAt)/1000));
+  $("pClock").textContent=String(Math.floor(s/60)).padStart(2,"0")+":"+String(s%60).padStart(2,"0");
+  paintRing(Math.max(0,P.left/P.dur));
+  if(!P.revealed&&S.reveal==="delay"&&P.left<=P.dur*0.34)revealNow();
+  if(P.left<=0)nextItem();
+}
+function revealNow(){
+  if(P.done)return;
+  const it=deck[P.i];if(!it||!it.answer||P.revealed||!$("pAnswer"))return;
+  P.revealed=true;
+  if(S.reveal!=="always")beep(880,.12,.13);
+  $("pAnswer").innerHTML='<div class="box'+(it.warn?" warn":"")+'">'+
+    '<div class="big">'+esc(it.answer)+'</div></div>';
+}
+function nextItem(){if(P.done)return;if(P.i>=deck.length-1)return finish();P.i++;showItem()}
+function prevItem(){if(P.done)return;if(P.i>0){P.i--;showItem()}}
+function togglePause(){
+  if(P.done)return;
+  P.paused=!P.paused;
+  $("pPause").textContent=P.paused?"▶ 繼續":"⏸ 暫停";
+  if(P.paused){metroStop();musicPause()}
+  else{if(S.metronome&&!muted)metroStart();if(S.music&&!muted)musicPlay()}
+}
+function finish(){
+  clearInterval(P.timer);P.done=true;metroStop();musicPause();
+  const used=Math.round((Date.now()-P.startAt)/1000);
+  $("pProg").style.width="100%";$("pRing").style.display="none";$("pLegend").innerHTML="";$("pDual").innerHTML="";
+  $("pInner").innerHTML='<div class="p-done"><div class="big">做完了！</div><p>共 '+deck.length+
+    ' 題・用時 '+timeText(used)+'</p><div class="btns"><button class="btn btn-orange" onclick="replay()">再做一輪</button>'+
+    '<button class="btn btn-ghost" onclick="stopPlay()">回到設定</button></div></div>';
+  beep(520,.16,.14);setTimeout(function(){beep(780,.22,.14)},170);
+}
+function replay(){
+  $("pRing").style.display="";
+  $("pInner").innerHTML='<div class="p-vis" id="pVis"></div><div class="p-prompt" id="pPrompt"></div><div class="p-answer" id="pAnswer"></div>';
+  startPlay();
+}
+$("pStage").addEventListener("click",function(){
+  if(!P.on||P.done)return;
+  const it=deck[P.i];
+  if(it&&it.answer&&!P.revealed&&S.reveal!=="never")revealNow();
+  else nextItem();
+});
+document.addEventListener("keydown",function(e){
+  if(!P.on)return;
+  if(e.key===" "){e.preventDefault();togglePause()}
+  else if(e.key==="ArrowRight"){e.preventDefault();nextItem()}
+  else if(e.key==="ArrowLeft"){e.preventDefault();prevItem()}
+  else if(e.key==="Enter"){e.preventDefault();revealNow()}
+  else if(e.key==="Escape"){e.preventDefault();stopPlay()}
+});
+
+/* ==================== 設定檔 / 列印 ==================== */
+function downloadConfig(){
+  const data=Object.assign({app:"反應動作動畫產生器",version:1},JSON.parse(JSON.stringify(S)),
+    {itemCount:deck.length,items:deck.map(function(d){return{mode:MODE_NAME[d.mode],題目:d.label,動作或答案:d.answer}}),
+     generatedAt:new Date().toISOString()});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(new Blob([JSON.stringify(data,null,2)],{type:"application/json"}));
+  a.download="config.json";a.click();URL.revokeObjectURL(a.href);
+  $("cfgStat").textContent="已下載 config.json（"+deck.length+" 題）。到另一台裝置按「讀取設定檔」就能還原。";
+  toast("設定檔已下載");
+}
+$("cfgFile").addEventListener("change",function(e){
+  const f=e.target.files[0];if(!f)return;
+  const rd=new FileReader();
+  rd.onload=function(){
+    let d;
+    try{d=JSON.parse(rd.result)}catch(err){toast("這不是有效的 JSON 檔");e.target.value="";return}
+    if(!d||typeof d!=="object"||!d.modes){toast("讀不到設定內容，請確認是本工具下載的 config.json");e.target.value="";return}
+    Object.keys(DEFAULTS).forEach(function(k){if(d[k]!==undefined)S[k]=d[k]});
+    S.sec=Math.min(15,Math.max(2,+S.sec||4));
+    S.total=Math.min(600,Math.max(60,Math.round((+S.total||180)/30)*30));
+    syncUI();update();
+    $("cfgStat").textContent="已讀取 "+f.name+"，設定已套用。";
+    toast("設定檔已讀取");e.target.value="";
+  };
+  rd.onerror=function(){toast("檔案讀取失敗，請再試一次");e.target.value=""};
+  rd.readAsText(f);
+});
+function printSheet(){
+  const w=window.open("","_blank");
+  if(!w){toast("瀏覽器擋掉新分頁了，請允許彈出視窗");return}
+  w.document.write('<meta charset="utf-8"><title>反應動作題目單</title><style>'+
+    'body{font-family:"Microsoft JhengHei",sans-serif;padding:28px;color:#12343B}'+
+    'h1{font-size:20px}p{color:#666;font-size:13px;margin-bottom:16px}'+
+    'table{width:100%;border-collapse:collapse}td,th{border:1px solid #ccc;padding:7px 10px;font-size:14px;text-align:left}'+
+    'th{background:#F1EADB}</style><h1>反應動作題目單</h1><p>'+S.sec+" 秒／題・"+timeText(S.total)+"・模式："+
+    activeModes().map(function(k){return MODE_NAME[k]}).join("＋")+"・共 "+deck.length+" 題</p><table>"+
+    "<tr><th style='width:52px'>#</th><th style='width:88px'>模式</th><th>題目</th><th>動作／答案</th></tr>"+
+    deck.map(function(d,i){return "<tr><td>"+(i+1)+"</td><td>"+MODE_NAME[d.mode]+"</td><td>"+esc(d.label)+
+      "</td><td>"+esc(d.answer||"—")+"</td></tr>"}).join("")+"</table>");
+  w.document.close();w.focus();w.print();
+}
+
+/* ==================== 收藏 ==================== */
+const PS=function(){return JSON.parse(store.get("react_presets")||"[]")};
+const savePS=function(l){store.set("react_presets",JSON.stringify(l))};
+function savePreset(){
+  const n=$("presetName").value.trim();
+  if(!n){$("presetName").focus();return toast("先幫這組設定取個名字")}
+  const l=PS();l.push({name:n,cfg:JSON.parse(JSON.stringify(S)),id:Date.now()});savePS(l);
+  $("presetName").value="";renderPresets();toast("已收藏「"+n+"」");
+}
+function renderPresets(){
+  const l=PS(),box=$("presetList");
+  if(!l.length){box.innerHTML='<p class="hint">還沒有收藏。調好上面的設定後，取個名字存起來。</p>';return}
+  box.innerHTML=l.map(function(p){
+    const ms=Object.keys(p.cfg.modes||{}).filter(function(k){return p.cfg.modes[k]}).map(function(k){return MODE_NAME[k]}).join("・");
+    return '<div class="saved"><div><b>'+esc(p.name)+'</b><div class="hint">'+p.cfg.sec+' 秒／題・'+
+      timeText(p.cfg.total)+'・'+(ms||"未選模式")+'</div></div><div style="display:flex;gap:7px;flex:none">'+
+      '<button class="btn btn-ghost btn-sm" onclick="loadPreset('+p.id+')">套用</button>'+
+      '<button class="btn btn-ghost btn-sm" onclick="delPreset('+p.id+')">刪除</button></div></div>'}).join("");
+}
+function loadPreset(id){
+  const p=PS().find(function(x){return x.id===id});if(!p)return;
+  S=Object.assign(JSON.parse(JSON.stringify(DEFAULTS)),JSON.parse(JSON.stringify(p.cfg)));
+  syncUI();update();toast("已套用「"+p.name+"」");
+}
+function delPreset(id){savePS(PS().filter(function(x){return x.id!==id}));renderPresets();toast("已刪除收藏")}
+function resetDefault(){
+  if(!confirm("回到預設值？目前的調整會不見。"))return;
+  S=JSON.parse(JSON.stringify(DEFAULTS));syncUI();update();toast("已回到預設");
+}
+
+/* ==================== 快速模式 ==================== */
+const PRESETS={
+  warm:{sec:5,total:180,modes:{arrow:true,color:false,shape:false,number:false,math:false,word:false},reveal:"always",arrowInverse:false},
+  mix:{sec:4,total:180,modes:{arrow:true,color:true,shape:false,number:true,math:false,word:false},
+    reveal:"delay",arrowInverse:false,colorStyle:"stroop",colorRule:"ink"},
+  math:{sec:7,total:180,modes:{arrow:false,color:false,shape:false,number:true,math:true,word:false},
+    numSubs:{clap:false,make100:true,make10:false,oddeven:false},mathLv:{l1:true,l2:true,l3:false,l4:false},reveal:"delay"},
+  hard:{sec:3,total:120,modes:{arrow:true,color:true,shape:true,number:true,math:false,word:true},
+    reveal:"delay",arrowInverse:true,arrowStyle:"single",colorStyle:"stroop",colorRule:"ink"},
+  stroop:{sec:5,total:180,modes:{arrow:true,color:true,shape:false,number:false,math:false,word:false},
+    arrowStyle:"stroop",arrowRule:"arrow",colorStyle:"stroop",colorRule:"ink",reveal:"delay",arrowInverse:false},
+  dual:{sec:5,total:180,modes:{arrow:true,color:false,shape:true,number:true,math:false,word:false},
+    arrowStyle:"dual",shapeStyle:"count",numSubs:{clap:true,make100:false,make10:false,oddeven:false,minus7:false,reverse:false},
+    dualTask:true,dualText:"原地踏步",reveal:"delay",metronome:true,bpm:96,metroAccent:true},
+  speech:{sec:8,total:180,modes:{arrow:false,color:false,shape:false,number:false,math:false,word:true},
+    wordKinds:{opposite:true,category:true,action:true,fluency:true},reveal:"delay"}
+};
+document.querySelectorAll("[data-preset]").forEach(function(b){
+  b.addEventListener("click",function(){
+    const p=PRESETS[b.dataset.preset];
+    Object.keys(p).forEach(function(k){S[k]=JSON.parse(JSON.stringify(p[k]))});
+    syncUI();update();toast("已套用："+b.dataset.label);
+  });
+});
+
+/* ==================== UI 綁定 ==================== */
+function seg(id,getter,setter,multi){
+  const box=$(id);
+  box.addEventListener("click",function(e){
+    const b=e.target.closest("button");if(!b)return;
+    setter(b.dataset.v);syncSeg(id,getter,multi);update();
+  });
+}
+function syncSeg(id,getter,multi){
+  const cur=getter();
+  $(id).querySelectorAll("button").forEach(function(b){
+    b.setAttribute("aria-pressed",multi?!!cur[b.dataset.v]:cur===b.dataset.v)});
+}
+function toggleIn(obj,key,minOne){
+  const on=Object.keys(obj).filter(function(k){return obj[k]});
+  if(obj[key]&&on.length===1&&minOne){toast("至少要留一個");return}
+  obj[key]=!obj[key];
+}
+seg("arrowColorSeg",function(){return S.arrowColor},function(v){S.arrowColor=v});
+seg("numSubSeg",function(){return S.numSubs},function(v){toggleIn(S.numSubs,v,true)},true);
+seg("clapMaxSeg",function(){return String(S.clapMax)},function(v){S.clapMax=+v});
+seg("mathSeg",function(){return S.mathLv},function(v){toggleIn(S.mathLv,v,true)},true);
+seg("wordSeg",function(){return S.wordKinds},function(v){toggleIn(S.wordKinds,v,true)},true);
+seg("revealSeg",function(){return S.reveal},function(v){S.reveal=v});
+seg("arrowStyleSeg",function(){return S.arrowStyle},function(v){S.arrowStyle=v});
+seg("arrowRuleSeg",function(){return S.arrowRule},function(v){S.arrowRule=v});
+seg("colorStyleSeg",function(){return S.colorStyle},function(v){S.colorStyle=v});
+seg("colorRuleSeg",function(){return S.colorRule},function(v){S.colorRule=v});
+seg("shapeStyleSeg",function(){return S.shapeStyle},function(v){S.shapeStyle=v});
+
+$("modes").addEventListener("change",function(e){
+  const c=e.target.closest("input[data-mode]");if(!c)return;
+  S.modes[c.dataset.mode]=c.checked;
+  c.closest(".mode").classList.toggle("on",c.checked);
+  update();
+});
+$("totalChips").addEventListener("click",function(e){
+  const b=e.target.closest(".chip");if(!b)return;S.total=+b.dataset.t;$("total").value=S.total;update()});
+$("sec").addEventListener("input",function(){S.sec=+this.value;update()});
+$("total").addEventListener("input",function(){S.total=+this.value;update()});
+$("arrowInverse").addEventListener("change",function(){S.arrowInverse=this.checked;update()});
+$("shapeColorful").addEventListener("change",function(){S.shapeColorful=this.checked;update()});
+$("showLegend").addEventListener("change",function(){S.showLegend=this.checked;update()});
+$("sound").addEventListener("change",function(){S.sound=this.checked;update()});
+$("random").addEventListener("change",function(){S.random=this.checked;update()});
+$("clapVerb").addEventListener("input",function(){S.clapVerb=this.value||"拍手";update()});
+$("mathMissing").addEventListener("change",function(){S.mathMissing=this.checked;update()});
+$("dualTask").addEventListener("change",function(){
+  S.dualTask=this.checked;
+  if(this.checked&&!S.metronome){S.metronome=true;$("metronome").checked=true;
+    toast("已一併打開節拍器，可在下面調拍速")}
+  update();
+});
+$("metronome").addEventListener("change",function(){
+  S.metronome=this.checked;if(!this.checked)metroStop();update()});
+$("metroAccent").addEventListener("change",function(){S.metroAccent=this.checked;update()});
+$("bpm").addEventListener("input",function(){
+  S.bpm=+this.value;update();
+  if(MET.on&&!MET.stopAt)metroStart();   // 播放中即時換速
+});
+$("bpmChips").addEventListener("click",function(e){
+  const b=e.target.closest(".chip");if(!b)return;
+  S.bpm=+b.dataset.b;$("bpm").value=S.bpm;update();if(MET.on&&!MET.stopAt)metroStart();
+});
+$("metroTest").addEventListener("click",function(){
+  if(MET.on){metroStop();toast("已停止")}else{metroStart(8);toast("試聽 8 拍")}
+});
+$("music").addEventListener("change",function(){
+  S.music=this.checked;if(!this.checked)musicPause();update()});
+$("musicUrl").addEventListener("change",function(){
+  S.musicUrl=this.value.trim();
+  if(ytPlayer&&ytPlayer.destroy){try{ytPlayer.destroy()}catch(e){}ytPlayer=null;$("ytHost").innerHTML=""}
+  update();
+});
+$("musicVol").addEventListener("input",function(){
+  S.musicVol=+this.value;update();
+  try{ytPlayer&&ytPlayer.setVolume&&ytPlayer.setVolume(S.musicVol)}catch(e){}
+});
+$("musicTest").addEventListener("click",function(){musicPlay();toast("試播中，按「停止試播」結束")});
+$("musicStop").addEventListener("click",function(){musicPause();toast("已停止試播")});
+$("dualText").addEventListener("input",function(){S.dualText=this.value;update()});
+$("wordCustom").addEventListener("input",function(){S.wordCustom=this.value;update()});
+
+function syncUI(){
+  $("sec").value=S.sec;$("total").value=S.total;
+  document.querySelectorAll("input[data-mode]").forEach(function(c){
+    c.checked=!!S.modes[c.dataset.mode];c.closest(".mode").classList.toggle("on",c.checked)});
+  $("arrowInverse").checked=!!S.arrowInverse;
+  $("shapeColorful").checked=!!S.shapeColorful;
+  $("showLegend").checked=!!S.showLegend;
+  $("sound").checked=!!S.sound;
+  $("random").checked=!!S.random;
+  $("clapVerb").value=S.clapVerb;
+  $("wordCustom").value=S.wordCustom||"";
+  syncSeg("arrowColorSeg",function(){return S.arrowColor});
+  syncSeg("numSubSeg",function(){return S.numSubs},true);
+  syncSeg("clapMaxSeg",function(){return String(S.clapMax)});
+  syncSeg("mathSeg",function(){return S.mathLv},true);
+  syncSeg("wordSeg",function(){return S.wordKinds},true);
+  syncSeg("revealSeg",function(){return S.reveal});
+  syncSeg("arrowStyleSeg",function(){return S.arrowStyle});
+  syncSeg("arrowRuleSeg",function(){return S.arrowRule});
+  syncSeg("colorStyleSeg",function(){return S.colorStyle});
+  syncSeg("colorRuleSeg",function(){return S.colorRule});
+  syncSeg("shapeStyleSeg",function(){return S.shapeStyle});
+  $("mathMissing").checked=!!S.mathMissing;
+  $("dualTask").checked=!!S.dualTask;
+  $("dualText").value=S.dualText||"原地踏步";
+  $("metronome").checked=!!S.metronome;
+  $("metroAccent").checked=S.metroAccent!==false;
+  $("bpm").value=Math.min(240,Math.max(60,S.bpm||96));
+  $("music").checked=!!S.music;
+  $("musicUrl").value=S.musicUrl||"";
+  $("musicVol").value=Math.min(100,Math.max(0,S.musicVol===undefined?35:S.musicVol));
+  renderMaps();
+}
+
+/* ==================== 啟動 ==================== */
+(function init(){
+  if(!store.ok)$("storeWarn").classList.add("on");
+  const saved=JSON.parse(store.get("react_config")||"null");
+  if(saved)Object.keys(DEFAULTS).forEach(function(k){if(saved[k]!==undefined)S[k]=saved[k]});
+  document.body.insertAdjacentHTML("beforeend",
+    '<datalist id="actionList">'+ACTIONS.map(function(a){return '<option value="'+a+'">'}).join("")+'</datalist>');
+  syncUI();renderPresets();update();
+})();
+</script>
+</body>
+</html>
